@@ -1,0 +1,244 @@
+---
+title: "A monocyte eQTL analysis using ATLASQTL"
+author: "Hélène Ruffieux"
+date: "12/29/2020"
+output: html_document
+bibliography: references.bib
+---
+
+
+### Context
+
+This R markdown document consists of a short tutorial for performing expression
+quantitative trait locus (eQTL) analyses using the Bayesian hierarchical mapping 
+approach ATLASQTL whose R package is available 
+[here](https://github.com/hruffieux/atlasqtl). 
+
+ATLASQTL implements a hierarchically sparse regression approach for modelling 
+jointly several thousands of genetic variants and molecular quantitative traits 
+using an efficient variational inference algorithm augmented with simulated 
+annealing schemes. Although the example presented below involves transcriptomic 
+expression, ATLASQTL can be used for any other type of molecular QTL problem, 
+with proteomic, lipodomic or metabolic traits.
+
+### Data
+
+The data used in this example consist of synthetic genotyping data which emulate 
+the genotypes (single nucleotide polymorphisms - SNPs) for the *LYZ* gene region 
+(the genotypes require setting up a data access agreement and hence cannot be 
+publicly shared). The expression data consist of resting (unstimulated) monocyte 
+levels, monocyte levels obtained from three stimulated conditions (IFNg, LPS2h, 
+LPS24h) and B-cells. To each of these transcriptomic datasets corresponds a 
+separate eQTL problem. 
+
+As we are using synthetic SNP data, we need to simulate genetic association 
+between the SNPs and the expression levels from each dataset. The two steps: 
+
+  1) generation of synthetic SNPs from the real SNPs and 
+  2) modification of the expression levels to create genetic associations
+    
+are done using our in-house R package `echoseq` available 
+[here](https://github.com/hruffieux/echoseq). While 1) requires access to the 
+real genotyping data, 2) can be run using the R script `prepare_data.R` 
+available in 
+[this repository](https://github.com/hruffieux/software_corner_ibs_bulletin) 
+- alternatively, one can directly use the `prepared_data.RData` R object file 
+which contains the datasets ready-to-use for this tutorial. 
+
+Finally, note that we restricted the analyses to the most variable the 
+transcriptomic levels and to the $250$ SNPs surrounding the *LYZ* gene in order 
+to limit the data file sizes and have the five eQTL analyses of this tutorial 
+run within seconds on a standard laptop (parallel execution can be enabled).
+
+### Installation
+
+Please install the R package `atlasqtl` following the instructions provided 
+[here](https://github.com/hruffieux/atlasqtl#installation). Note that the 
+GSL library must be installed prior to installing the package.
+
+### Analysis code
+
+We first set the data, output and main directories for the analysis (please 
+edit according to your own setup):
+```{r setup, include = TRUE}
+rm(list = ls())
+
+CORE_DIR <- file.path(Sys.getenv("CORE_DIR"), "software_corner_ibs_bulletin/")
+
+data_dir <- file.path(CORE_DIR, "data/")
+out_dir <- file.path(CORE_DIR, "output/")
+main_dir <- file.path(CORE_DIR, "scripts/")
+setwd(main_dir)
+```
+
+We next set a seed for reproducibility. The random generator "L'Ecuyer-CMRG" 
+ensures reproducibility when parallel processes are used.
+```{r seed, include = TRUE}
+RNGkind("L'Ecuyer-CMRG")
+seed <- 1
+set.seed(seed)
+```
+
+The SNP and monocyte expression data are loaded (see Data Section above for 
+details).
+```{r data, include = TRUE}
+load(file.path(data_dir, "prepared_data.RData"))
+ls()
+```
+
+We will run a total of five different eQTL analyses (for resting monocytes, 
+IFNg, LPS2h, LPS24h monocytes and B-cells); the vector `vec_type` gathers the 
+names of these eQTL problems. The five analyses can be run in parallel by first 
+specifying the number of CPUs to be used. Here we are using the $4$ cores of our 
+laptop, but please change this number according to your setup. 
+Setting `n_cpus <- 1` corresponds to a serial execution (e.g., needed for 
+Windows users).
+```{r parallel-execution, include = TRUE}
+vec_type <- names(list_data)
+
+n_cpus <- 4
+
+p <- unique(sapply(list_data, function(ll_type) ncol(ll_type$snps)))
+stopifnot(length(p) == 1) # all datasets involve the same number of SNPs
+
+q <- unique(sapply(list_data, function(ll_type) ncol(ll_type$expr)))
+stopifnot(length(q) == 1) # all datasets involve the same number of traits
+
+n <- sapply(list_data, function(ll_type) nrow(ll_type$expr))
+n_check <- sapply(list_data, function(ll_type) nrow(ll_type$expr))
+stopifnot(all.equal(n, n_check)) # same number of samples for SNPs and traits within each eQTL problem
+rm(n_check)
+
+vec_type
+p # number of SNPs
+q # number of traits in each eQTL problem
+n # sample sizes in the five eQTL problems
+```
+
+
+When `bool_save <- TRUE`, the analysis output is saved to a dedicated directory 
+and the output and error messages are redirected to text files there.
+```{r output-directory, include = TRUE}
+bool_save <- FALSE
+
+if( bool_save ){
+  res_dir <- paste0(out_dir, "atlasqtl_runs_seed_", seed, "/")
+  dir.create(res_dir, showWarnings = FALSE)
+
+  sink(paste(res_dir, "out.txt", sep = ""), append = F,
+       split = T, type = "output")
+  sink(file(paste(res_dir, "err.txt", sep = ""), open = "wt"),
+       type = "message")
+}
+```
+
+ATLASQTL requires the specification of just two hyperparameters via the 
+elicitation of a prior mean and variance for the number of SNPs associated with 
+each trait. The impact of these choices on the analysis is limited, and 
+essentially non existent once a permutation-based FDR threshold is employed 
+(where the "null-case" permutation runs use the same prior specifications). 
+
+The remaining model parameters are inferred in a fully Bayesian fashion. In 
+particular, the hotspot propensity is assigned a horseshoe prior which 
+circumvent ad-hoc specifications of top-level variances (a case where inference 
+is prone to strong biases). Our specification also has desirable multiplicity 
+adjustment properties for dealing with the large-response case, see 
+@ruffieux2020global.
+```{r hyperparameter-elicitation, include = TRUE}
+mu_t <- 1 # prior number of SNPs expected to be associated with each expression level
+sd_t <- 2 # prior standard deviation for this number
+```
+
+The next chunk runs the five ATLASQTL analyses in parallel, also storing the 
+overall run time. We are using the default annealing setting, namely a geometric 
+schedule on the inverse temperature, with initial temperature of $2$ and $10$ 
+different temperatures. This specification, as well as alternative options,
+are described in greater details on the help page of the function, by running
+`?atlasqtl`. A number of additional settings (e.g., tolerance, maximum number of
+iterations, checkpointing, etc.) are also detailed there.
+
+Note that the parallel execution relies on the R package `parallel` which has 
+already been installed as part of the `atlasqtl` installation.
+```{r atlasqtl-runs, include = TRUE, cache = TRUE}
+# Takes about 1min 30sec on a standard laptop with 4 CPUs
+#
+require(atlasqtl)
+
+rt <- system.time(list_out <- parallel::mclapply(vec_type, function(type) {
+
+  snps <- list_data[[type]]$snps
+  expr <- list_data[[type]]$expr
+
+  stopifnot(rownames(snps) == rownames(expr))
+  
+  atlasqtl(Y = expr, X = snps, 
+           p0 = c(mu_t, sd_t^2), 
+           add_collinear_back = TRUE)
+  
+}, mc.cores = n_cpus))
+
+names(list_out) <- vec_type
+print(rt)
+```
+
+The object returned by `atlasqtl` contains a range of useful posterior 
+quantities, which can be employed to assess:
+
+   * the pairwise associations between each pair of SNP and trait: using the 
+variational posterior probabilities (PPIs) stored in `gam_vb` 
+($p \times q$ matrix) and the variational posterior means of the regression 
+estimates stored in `beta_vb` ($p \times q$ matrix);
+   * the hotspot propensities: using the variational posterior mean of $\theta_s$ 
+stored in `theta_vb` (vector of length $p$).
+
+It also contains diagnostic values on the final status of convergence and number of
+iterations used for the coordinate ascent variational algorithm.
+
+We print here a snapshot of these quantities for the first unstimulated-monocyte
+eQTL analysis.
+
+```{r output-snapshot, include = TRUE}
+atlasqtl_unstim <- list_out$unstim
+summary(as.vector(atlasqtl_unstim$gam_vb)) # PPIs, pr(gamma = 1 | y)
+summary(as.vector(atlasqtl_unstim$beta_vb)) # E(beta | y)
+summary(atlasqtl_unstim$theta_vb) # E(theta | y)
+```
+
+If `bool_save = TRUE`, the full output is saved in the directory created above.
+```{r output-save, include = TRUE}
+if (bool_save) {
+  save(list_out, rt, file = paste(res_dir, "output.RData", sep = "")) 
+}
+```
+
+
+Finally, we display a Manhattan-type plot which indicates the position of the
+hotspots, as estimated in the five different eQTL analyses. 
+
+Also note thatpermutation analyses can be run to compute calibrated Bayesian FDR 
+thresholds on the PPIs; we don't implement this for computational economy and 
+use an arbitrary threshold instead. The procedure to derive these 
+permutation-based FDR threshold is described in details in @ruffieux2017efficient 
+and @ruffieux2020global.
+```{r manhattan-plot, include = TRUE, fig.align = 'center'}
+thres <- 0.8
+list_rs_thres <- lapply(list_out, function(ll_type) rowSums(ll_type$gam_vb>thres))
+
+vec_pch <- c(15, 4, 2, 21, 20)
+
+plot(list_rs_thres[[1]], pch = vec_pch[1], 
+     ylim = c(0, max(unlist(list_rs_thres))),
+     main = "Hotspot sizes",
+     xlab = "SNPs",
+     ylab = paste0("sum_k PPI_jk > ", thres))
+for (type_id in 2:5) {
+  points(list_rs_thres[[type_id]], pch = vec_pch[type_id])
+}
+legend("topleft", legend = vec_type, pch = vec_pch, bty = "n")
+```
+
+```{r session-info, include = TRUE}
+sessionInfo() # for reproducibility
+```
+
+# References
