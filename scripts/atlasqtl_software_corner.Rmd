@@ -40,9 +40,8 @@ growing in complexity, which calls for elaborate and flexible modelling
 approaches. When coupled with robust and efficient inference, Bayesian 
 hierarchical modelling is a powerful framework for describing intricate 
 dependencies at the scale required by current applications, while conveying 
-uncertainty in a coherent fashion.
-
-We present the R package `atlasqtl`, which implements a 
+uncertainty in a coherent fashion. In this note, we present the R package 
+`atlasqtl`, which implements a 
 <!-- contributes to this endeavour by providing  -->
 scalable hierarchical framework for variable selection in regression problems 
 with high-dimensional predictor and response spaces.
@@ -51,30 +50,29 @@ with high-dimensional predictor and response spaces.
 ## Model and inference 
 
 The model consists of series of hierarchically-related spike-and-slab 
-regressions that permit a borrowing of information across very large numbers of 
-responses. A graphical representation of the model is provided in Figure 
-\@ref(fig:figgm). Each pair of predictor $X_s$ and response $y_t$ has its 
+regressions that permit borrowing information across large numbers of 
+responses. A graphical representation is provided in Figure 
+\@ref(fig:figgm), and the full model and inference algorithm are detailed in @ruffieux2020global. Each pair of predictor $X_s$ and response $y_t$ has its 
 corresponding regression coefficient $\beta_{st}$ and spike-and-slab binary 
 latent variable $\gamma_{st}$, from which posterior probabilities of association 
 are conveniently obtained, $\text{pr}(\gamma_{st} = 1 \mid y)$, and employed to 
-implement Bayesian false discovery rate (bFDR) control. The model is also 
+implement Bayesian false discovery rate control. The model is also 
 tailored to the detection of \emph{hotspots}, namely, predictors associated with 
-several responses: the top-level hierarchy introduces a probit submodel which 
-involves response-specific contributions to the spike-and-slab probability of 
-association, via $\zeta_t$, and predictor-specific modulations of this 
+several responses: the top-level hierarchy entails a probit submodel which 
+involves a response-specific contribution to the spike-and-slab probability of 
+association, via $\zeta_t$, and a predictor-specific modulation of this 
 contribution, via $\theta_s$. The latter parameter also acts as the propensity 
 of predictor $X_s$ to be a hotspot and is assigned a horseshoe prior, which 
 adapts to the overall problem sparsity (via the global scale $\sigma_0$), while 
-flexibly capturing hotspots (via the Cauchy tail of the local scale $\lambda_s$). 
-Joint inference require special attention as the binary latent matrix 
+flexibly capturing hotspot effects (via the Cauchy tail of the local scale $\lambda_s$). 
+Joint inference requires special attention as the binary latent matrix 
 $\Gamma = \{\gamma_{st}\}$ creates a discrete search space of dimension 
 $2^{p\times q}$. To overcome this complication, `atlasqtl` implements a 
 variational inference algorithm based on a structured mean-field factorisation 
-and efficient batch updates. The algorithm is augmented with simulated annealing 
-schemes that improve the exploration of highly multimodal spaces by introducing 
-so-called "temperature" parameters controling the degree of separation of 
-the modes of the target distribution. The model and annealed 
-variational algorithm are detailed in @ruffieux2020global.
+and efficient batch updates. The algorithm is augmented with a simulated 
+annealing scheme that improves the exploration of highly multimodal spaces by 
+introducing so-called "temperature" parameters controlling the degree of 
+separation of the modes of a series of "heated" distributions (@ruffieux2020global). 
 
 <!-- `atlasqtl` provides an annealed variational inference routine for a  -->
 <!-- series of hierarchically-related spike-and-slab regressions, thereby enabling  -->
@@ -86,10 +84,11 @@ variational algorithm are detailed in @ruffieux2020global.
 setting. Hereafter we discuss a use case in the context of expression quantitative 
 trait locus (eQTL) analysis, in which \emph{hotspot genetic variants}, 
 controlling many molecular traits at once, may be responsible for important 
-functional mechanisms --- such problems aim to clarify the genetic architecture 
-underlying complex traits and disease by estimation associations between up to 
-millions candidate predictors (genetic variants) and several thousands of 
-responses (molecular traits, such as genomic, proteomic, metabolomic levels).
+functional mechanisms underlying specific disease endpoints --- such studies aim 
+to clarify the genetic architecture of diseases by estimating associations 
+between up to a few million candidate predictors (genetic variants) and several 
+thousand responses (molecular traits, such as genomic, proteomic, metabolomic 
+levels).
 
 <!-- ### Model and algorithm -->
 
@@ -111,35 +110,36 @@ knitr::include_graphics("../figures/gm.png")
 <!-- The shaded nodes are observed, the others are inferred; $\beta_{st}$ is the regression coefficient for association between predictor $X_s$ (SNP) and response $y_t$ (expression level), and $\gamma_{st}$ is the latent binary indicator for the presence or absence of this effect. The probability of association is decoupled into response-specific, $\zeta_t$, and predictor-specific, $\theta_s$, contributions. The latter entails the global-local second-stage model for hotspots. -->
 ## Installation
 
-The hierarchical model and R package `atlasqtl` is written in R with C++ 
-subroutines. It can be installed following the instructions provided at https://github.com/hruffieux/atlasqtl#installation. Note that the 
-GSL library must be installed prior to installing the package.
+The `atlasqtl` package is written in R with C++ subroutines. It can be 
+installed following the instructions provided at https://github.com/hruffieux/atlasqtl#installation. Note that the GSL library 
+must be installed prior to installing the package.
 
 ## Data and reproducibility
 
-The material (data and analysis scripts) used in this example is available at https://github.com/hruffieux/software_corner_ibs_bulletin
-for replication purposes. It involves synthetic genotyping data which emulate 
-the genotypes (single nucleotide polymorphisms - SNPs) for the *LYZ* gene region 
-(the genotypes themselves require setting up a data access agreement and hence 
-cannot be publicly shared). The expression data consist of resting (unstimulated) 
-monocyte levels, monocyte levels obtained from three stimulated conditions (IFNg, 
-LPS2h, LPS24h) and B-cells. To each of these transcriptomic datasets corresponds 
-a separate eQTL problem. 
+The material used in this example is available at https://github.com/hruffieux/software_corner_ibs_bulletin
+for replication purposes. It involves synthetic genotyping data generated using 
+our in-house R package `echoseq` available at 
+https://github.com/hruffieux/echoseq; these data emulate real genotypes (single 
+nucleotide polymorphisms, "SNPs") in the *LYZ* gene region, which cannot be 
+share without data access agreement. The expression data consist of monocyte 
+levels before and after immune stimulation (resting, IFNg, LPS2h, LPS24h), as 
+well as B-cell levels. To each of these transcriptomic datasets corresponds a 
+separate eQTL problem. 
 
-The two steps: 
+<!-- The two steps:  -->
 
-  1) generation of synthetic SNPs from the real SNPs and 
-  2) modification of the expression levels to simulate genetic associations
-    
-are done using our in-house R package `echoseq` available at 
-https://github.com/hruffieux/echoseq. While 1) requires access to the 
-real genotyping data, 2) can be run using the R script `prepare_data.R` 
-available in https://github.com/hruffieux/software_corner_ibs_bulletin
--- alternatively, one can directly use the `prepared_data.RData` R object file 
-which contains ready-to-use datasets. We restricted the analyses to the most 
-variable transcriptomic levels and to the $250$ SNPs surrounding the *LYZ* gene 
-to limit the data file sizes and have the five eQTL analyses run within seconds 
-on a standard laptop (parallel execution can be enabled).
+<!--   1) generation of synthetic SNPs from the real SNPs and  -->
+<!--   2) modification of the expression levels to simulate genetic associations -->
+
+<!-- are done using our in-house R package `echoseq` available at  -->
+<!-- https://github.com/hruffieux/echoseq. While 1) requires access to the  -->
+<!-- real genotyping data, 2) can be run using the R script `prepare_data.R`  -->
+<!-- available in https://github.com/hruffieux/software_corner_ibs_bulletin -->
+<!-- -- alternatively, one can directly use the `prepared_data.RData` R object file  -->
+<!-- which contains ready-to-use datasets. We restricted the analyses to the most  -->
+<!-- variable transcriptomic levels and to the $250$ SNPs surrounding the *LYZ* gene  -->
+<!-- to limit the data file sizes and have the five eQTL analyses run within seconds  -->
+<!-- on a standard laptop (parallel execution can be enabled). -->
 
 
 ## Analysis
@@ -171,8 +171,6 @@ using `n_cpus = 4` cpus). The corresponding datasets are stored in the list
 
 ```{r parallel-execution, echo = FALSE, results='hide'}
 vec_type <- names(list_data) # the vector `vec_type` gathers the names of the eQTL problems (resting monocytes, IFNg, LPS2h, LPS24h monocytes and B-cells)
-
-n_cpus <- 4 # Here we use the $4$ cores of our laptop, but please change this number according to your setup. Setting `n_cpus <- 1` corresponds to a serial execution (e.g., needed for Windows users).
 
 p <- unique(sapply(list_data, function(ll_type) ncol(ll_type$snps)))
 stopifnot(length(p) == 1) # all datasets involve the same number of SNPs
@@ -233,6 +231,8 @@ require(atlasqtl)
 
 mu_t <- 1
 v_t <- 4
+
+n_cpus <- 4 # please change this number according to your setup. `n_cpus <- 1` corresponds to a serial execution (e.g., needed for Windows users).
 
 list_out <- parallel::mclapply(vec_type, function(type) {
 
