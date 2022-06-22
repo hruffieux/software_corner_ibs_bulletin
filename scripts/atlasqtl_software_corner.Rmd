@@ -116,12 +116,13 @@ must be installed prior to installing the package.
 
 ## Data and reproducibility
 
-The material used in this example is available at https://github.com/hruffieux/software_corner_ibs_bulletin
+The material used in this example is available at 
+https://github.com/hruffieux/software_corner_ibs_bulletin
 for replication purposes. It involves synthetic genotyping data generated using 
-our in-house R package `echoseq` available at 
-https://github.com/hruffieux/echoseq; these data emulate real genotypes (single 
+our in-house R package `echoseq`  
+(https://github.com/hruffieux/echoseq); these data emulate real genotypes (single 
 nucleotide polymorphisms, "SNPs") in the *LYZ* gene region, which cannot be 
-share without data access agreement. The expression data consist of monocyte 
+shared without data access agreement. The expression data consist of monocyte 
 levels before and after immune stimulation (resting, IFNg, LPS2h, LPS24h), as 
 well as B-cell levels. To each of these transcriptomic datasets corresponds a 
 separate eQTL problem. 
@@ -161,16 +162,6 @@ set.seed(seed)
 # Section above for details).
 load(file.path(data_dir, "prepared_data.RData"))
 ls()
-```
-
-We next illustrate the main package functionalities on five different eQTL 
-analyses (whose names, resting monocytes, IFNg, LPS2h, LPS24h monocytes and B-cells, 
-are gathered in the vector `vec_type`, and which can be run in parallel =  here, 
-using `n_cpus = 4` cpus). The corresponding datasets are stored in the list 
-`list_data`.
-
-```{r parallel-execution, echo = FALSE, results='hide'}
-vec_type <- names(list_data) # the vector `vec_type` gathers the names of the eQTL problems (resting monocytes, IFNg, LPS2h, LPS24h monocytes and B-cells)
 
 p <- unique(sapply(list_data, function(ll_type) ncol(ll_type$snps)))
 stopifnot(length(p) == 1) # all datasets involve the same number of SNPs
@@ -183,7 +174,6 @@ n_check <- sapply(list_data, function(ll_type) nrow(ll_type$expr))
 stopifnot(all.equal(n, n_check)) # same number of samples for SNPs and traits within each eQTL problem
 rm(n_check)
 
-vec_type
 p # number of SNPs
 q # number of traits in each eQTL problem
 n # sample sizes in the five eQTL problems
@@ -201,30 +191,33 @@ if( bool_save ){
 }
 ```
 
-`atlasqtl` requires the specification of just two hyperparameters via the 
-elicitation of a prior mean `mu_t` and variance `v_t` for the number of SNPs 
-associated with each trait. The sensitivity of inference to these choices is 
-typically limited, and essentially non existent once a permutation-based FDR 
-threshold is employed (where the "null-case" permutation runs use the same prior 
-specifications). 
-
-The remaining model parameters are inferred by variational inference; in 
-particular, the hotspot propensity is assigned a horseshoe prior which 
-circumvent ad-hoc specifications of top-level variances (a case where inference 
-is prone to strong biases). This specification also has desirable multiplicity 
-adjustment properties for dealing with the large-response case, see 
+We illustrate the main package functionalities on the five eQTL problems 
+(corresponding datasets stored in the list `list_data`). `atlasqtl` requires the 
+specification of just two hyperparameters via the elicitation of a prior mean 
+`mu_t` and variance `v_t` for the number of predictors associated with each 
+response. The sensitivity of inference to these choices should be evaluated on a 
+case-by-case basis; it is however very limited when a permutation-based FDR 
+threshold is employed, where the "null-case" permutation runs use the same 
+hyperparameter specifications. The remaining model parameters are inferred by 
+variational inference. In particular, the horseshoe prior on the hotspot 
+propensity circumvents ad-hoc choices of top-level variances (for which
+inference is prone to spurious effects). This specification also has desirable 
+multiplicity adjustment properties for dealing with the large-response case, see 
 @ruffieux2020global.
 
-The next chunk runs the five ATLASQTL analyses in parallel, also storing the 
-overall run time. We are using the default annealing setting, namely a geometric 
-schedule on the inverse temperature, with initial temperature of $2$ and $10$ 
-different temperatures. This specification, as well as alternative options,
-are described in greater details on the help page of the function, by running
-`?atlasqtl`. A number of additional settings (e.g., tolerance, maximum number of
-iterations, checkpointing, etc.) are also detailed there.
+The code below runs the five `atlasqtl` analyses in parallel. The annealing 
+schedule (initial temperature, grid size and type of spacing) can be supplied 
+via the argument `anneal` --- here we use a default geometric schedule on the 
+inverse temperature, with initial temperature of $2$ and grid size $10$. The 
+argument `add_collinear_back` is a boolean indicating whether or not to include 
+the final posterior summaries for all possible collinear variables in $X$ (which 
+are removed during the run to ensure the stability of inference). A number of 
+additional settings (e.g., tolerance, maximum number of iterations, 
+checkpointing, etc.) can be chosen by the user and are detailed on the help page 
+of the function, which can be displayed by running `?atlasqtl`. Note that the 
+parallel execution relies on the R package `parallel` which has already been 
+installed as part of the `atlasqtl` installation.
 
-Note that the parallel execution relies on the R package `parallel` which has 
-already been installed as part of the `atlasqtl` installation.
 \footnotesize
 ```{r atlasqtl-runs, include = TRUE, cache = TRUE, results = "hide"}
 require(atlasqtl)
@@ -232,14 +225,17 @@ require(atlasqtl)
 mu_t <- 1
 v_t <- 4
 
-n_cpus <- 4 # please change this number according to your setup. `n_cpus <- 1` corresponds to a serial execution (e.g., needed for Windows users).
+vec_type <- names(list_data) # names of the eQTL problems 
+                             # (resting, IFNg, LPS2h, 
+                             # LPS24h monocytes and B-cells).
+
+n_cpus <- 4 # nb of CPUs for parallel execution - please 
+            # change this number according to your setup. 
 
 list_out <- parallel::mclapply(vec_type, function(type) {
 
   snps <- list_data[[type]]$snps
   expr <- list_data[[type]]$expr
-
-  stopifnot(rownames(snps) == rownames(expr))
   
   atlasqtl(Y = expr, X = snps, 
            p0 = c(mu_t, v_t), 
@@ -254,24 +250,71 @@ The object returned by `atlasqtl` contains a range of useful posterior
 quantities, which can be employed to assess:
 
    * the pairwise associations between each pair of SNP and trait: using the 
-variational posterior probabilities (PPIs) stored in `gam_vb` 
+variational posterior probabilities (PPIs) stored in `gam_vb`
 ($p \times q$ matrix) and the variational posterior means of the regression 
 estimates stored in `beta_vb` ($p \times q$ matrix);
    * the hotspot propensities: using the variational posterior mean of $\theta_s$ 
 stored in `theta_vb` (vector of length $p$).
 
-It also contains diagnostic values on the final status of convergence and number of
-iterations used for the coordinate ascent variational algorithm.
+It also contains diagnostic values on the final status of convergence and number 
+of iterations used for the coordinate ascent variational algorithm.
 
-We print here a snapshot of these quantities for the first unstimulated-monocyte
-eQTL analysis.
+The custom `print.atlasqtl` and `summary.atlasqtl` function provide information
+about the run and a summary of the above posterior quantities; e.g., for the unstimulated-monocyte eQTL analysis:
+
+
+```{r print-summary, echo=FALSE, results='hide'}
+tol <- 0.1
+maxit <- 1000
+anneal <- c(1, 2, 10)
+print_atlasqtl <- function(x, anneal, maxit, tol) {
+  x$converged <- F
+  if (x$converged) {
+    cat(paste0("****************************************************** \n", 
+               "Successful convergence after ", x$it, " iterations, using a\n", 
+               "tolerance of ", tol, " on the absolute changes in the ELBO\n", 
+               "****************************************************** \n\n"))
+    
+    if (!is.null(anneal)) {
+      
+      if (anneal[1] == 1) {
+        anneal_type <- "Geometric"
+      } else if (anneal[1] == 2) {
+        anneal_type <- "Harmonic"
+      } else if (anneal[1] == 3) {
+        anneal_type <- "Linear"
+      }
+      cat(paste0(anneal_type, " annealing on the inverse temperature was\n", 
+                 "applied for the first ", anneal[3], " iterations, with initial\n",
+                 "temperature of ", anneal[2],
+                 ifelse(all(anneal == c(1, 2, 10)), " (default).\n", ".\n")))
+    }
+
+  } else {
+        cat(paste0("************************************************ \n", 
+                   "Unsuccessful convergence after ", maxit, " iterations. \n",
+                   "Difference between last two consecutive values\n", 
+                   "of the ELBO: ", format(x$diff_lb, digits = 3), ".\n\n",
+                   "Try increasing:\n", 
+                   "- the maximum number of iterations (maxit) or\n", 
+                   "- the convergence threshold (tol). \n",
+                   "************************************************ \n\n"))
+  }
+}
+
+summary.atlasqtl <- function(x) {
+print(summary(as.vector(x$gam_vb))) # PPIs, pr(gamma = 1 | y)
+    print(summary(as.vector(x$beta_vb))) # E(beta | y)
+    print(summary(x$theta_vb)) 
+    }
+
+```
 
 \footnotesize
 ```{r output-snapshot, include = TRUE}
-atlasqtl_unstim <- list_out$unstim
-summary(as.vector(atlasqtl_unstim$gam_vb)) # PPIs, pr(gamma = 1 | y)
-summary(as.vector(atlasqtl_unstim$beta_vb)) # E(beta | y)
-summary(atlasqtl_unstim$theta_vb) # E(theta | y)
+print_atlasqtl(list_out$bcells, anneal, maxit, tol) # replace by list_out$bcells simply 
+
+summary(list_out$bcells)
 ```
 \normalsize 
 
