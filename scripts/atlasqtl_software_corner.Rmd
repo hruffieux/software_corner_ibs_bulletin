@@ -1,5 +1,5 @@
 ---
-title: "atlasqtl: an R package for variable selection in sparse regression with hierarchically-related outcomes"
+title: "atlasqtl: an R package for variable selection in sparse regression with hierarchically-related responses"
 author: "Hélène Ruffieux"
 date: "06/15/2022"
 output:
@@ -49,7 +49,7 @@ with high-dimensional predictor and response spaces.
 
 ## Model and inference 
 
-The model consists of series of hierarchically-related spike-and-slab 
+The model consists of series of hierarchically-relatd spike-and-slab 
 regressions that permit borrowing information across large numbers of 
 responses. A graphical representation is provided in Figure 
 \@ref(fig:figgm), and the full model and inference algorithm are detailed in @ruffieux2020global. Each pair of predictor $X_s$ and response $y_t$ has its 
@@ -240,7 +240,6 @@ list_out <- parallel::mclapply(vec_type, function(type) {
   atlasqtl(Y = expr, X = snps, 
            p0 = c(mu_t, v_t), 
            add_collinear_back = TRUE)
-  
 }, mc.cores = n_cpus)
 
 names(list_out) <- vec_type
@@ -263,58 +262,11 @@ The custom `print.atlasqtl` and `summary.atlasqtl` function provide information
 about the run and a summary of the above posterior quantities; e.g., for the unstimulated-monocyte eQTL analysis:
 
 
-```{r print-summary, echo=FALSE, results='hide'}
-tol <- 0.1
-maxit <- 1000
-anneal <- c(1, 2, 10)
-print_atlasqtl <- function(x, anneal, maxit, tol) {
-  x$converged <- F
-  if (x$converged) {
-    cat(paste0("****************************************************** \n", 
-               "Successful convergence after ", x$it, " iterations, using a\n", 
-               "tolerance of ", tol, " on the absolute changes in the ELBO\n", 
-               "****************************************************** \n\n"))
-    
-    if (!is.null(anneal)) {
-      
-      if (anneal[1] == 1) {
-        anneal_type <- "Geometric"
-      } else if (anneal[1] == 2) {
-        anneal_type <- "Harmonic"
-      } else if (anneal[1] == 3) {
-        anneal_type <- "Linear"
-      }
-      cat(paste0(anneal_type, " annealing on the inverse temperature was\n", 
-                 "applied for the first ", anneal[3], " iterations, with initial\n",
-                 "temperature of ", anneal[2],
-                 ifelse(all(anneal == c(1, 2, 10)), " (default).\n", ".\n")))
-    }
-
-  } else {
-        cat(paste0("************************************************ \n", 
-                   "Unsuccessful convergence after ", maxit, " iterations. \n",
-                   "Difference between last two consecutive values\n", 
-                   "of the ELBO: ", format(x$diff_lb, digits = 3), ".\n\n",
-                   "Try increasing:\n", 
-                   "- the maximum number of iterations (maxit) or\n", 
-                   "- the convergence threshold (tol). \n",
-                   "************************************************ \n\n"))
-  }
-}
-
-summary.atlasqtl <- function(x) {
-print(summary(as.vector(x$gam_vb))) # PPIs, pr(gamma = 1 | y)
-    print(summary(as.vector(x$beta_vb))) # E(beta | y)
-    print(summary(x$theta_vb)) 
-    }
-
-```
-
 \footnotesize
 ```{r output-snapshot, include = TRUE}
-print_atlasqtl(list_out$bcells, anneal, maxit, tol) # replace by list_out$bcells simply 
-
-summary(list_out$bcells)
+print(list_out$bcells) 
+thres_fdr <- 0.05
+summary(list_out$bcells, thres = thres_fdr, fdr_adjust = TRUE)
 ```
 \normalsize 
 
@@ -324,7 +276,6 @@ if (bool_save) { # if `bool_save = TRUE`, the full output is saved in the direct
   save(list_out, rt, file = paste(res_dir, "output.RData", sep = "")) 
 }
 ```
-
 
 Finally, we display a Manhattan-type plot which indicates the position of the
 hotspots, as estimated in the five different eQTL analyses. 
@@ -337,23 +288,16 @@ and @ruffieux2020global.
 
 \footnotesize
 ```{r manhattan-plot, include = TRUE, fig.align = 'center'}
-thres <- 0.8
-list_rs_thres <- lapply(list_out, 
-                        function(ll_type) 
-                          rowSums(ll_type$gam_vb>thres))
-
+add <- FALSE
+ylim_max <- max(unlist(lapply(list_out, function(ll_type) rowSums(assign_bFDR(ll_type$gam_vb)<thres_fdr)))) 
 vec_pch <- c(15, 4, 2, 21, 20)
 
-plot(list_rs_thres[[1]], pch = vec_pch[1], 
-     ylim = c(0, max(unlist(list_rs_thres))),
-     main = "Hotspot sizes",
-     xlab = "SNPs",
-     ylab = paste0("sum_k PPI_jk > ", thres))
-for (type_id in 2:5) {
-  points(list_rs_thres[[type_id]], pch = vec_pch[type_id])
+for (type_id in 1:5) {
+  plot(list_out[[type_id]], thres = thres_fdr, fdr_adjust = TRUE, 
+       pch = vec_pch[type_id], ylim_max = ylim_max, add = add)
+  add <- TRUE  
 }
-legend("topleft", legend = vec_type, pch = vec_pch, 
-       bty = "n")
+legend("topleft", legend = vec_type, pch = vec_pch, bty = "n")
 ```
 \normalsize 
 
