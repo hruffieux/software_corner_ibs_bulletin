@@ -1,7 +1,7 @@
 ---
 title: "atlasqtl: an R package for variable selection in sparse regression with hierarchically-related responses"
 author: "Hélène Ruffieux"
-date: "06/15/2022"
+date: ""
 output:
   bookdown::pdf_document2: 
     toc: false
@@ -10,7 +10,10 @@ classoption:
   - twocolumn
 geometry: margin=0.7in
 bibliography: references.bib
+header-includes:
+  - \usepackage[font={footnotesize, it}, labelfont={bf}]{caption}
 ---
+
 
 ```{r setup, echo=FALSE}
 
@@ -30,11 +33,10 @@ setwd(main_dir)
 
 <!-- ### Context -->
 
-Statistical problems 
-<!-- involving high-dimensional set-ups  -->
-in the high-dimensional setting multiply, prompted by 
-the proliferation of technologies capable of measuring large volumes of 
-information, whether on health and lifestyle parameters, molecular entities or 
+Statistical studies aimed at identifying associations between a high-dimensional 
+vector of candidate predictors and large numbers of correlated outcomes multiply, 
+prompted by the proliferation of technologies capable of measuring large volumes 
+of information, whether on health and lifestyle parameters, molecular entities or 
 even galaxies. As well as growing in dimension, the datasets collected are also 
 growing in complexity, which calls for elaborate and flexible modelling 
 approaches. When coupled with robust and efficient inference, Bayesian 
@@ -49,22 +51,25 @@ with high-dimensional predictor and response spaces.
 
 ## Model and inference 
 
-The model consists of series of hierarchically-relatd spike-and-slab 
-regressions that permit borrowing information across large numbers of 
+The model consists of a series of hierarchically-related spike-and-slab 
+regressions that permit borrowing information across a large number of 
 responses. A graphical representation is provided in Figure 
-\@ref(fig:figgm), and the full model and inference algorithm are detailed in @ruffieux2020global. Each pair of predictor $X_s$ and response $y_t$ has its 
+\@ref(fig:figgm) --- the full prior specification 
+<!-- and inference algorithm are  -->
+is given in @ruffieux2020global. Each pair of predictor $X_s$ and response $y_t$ has a 
 corresponding regression coefficient $\beta_{st}$ and spike-and-slab binary 
-latent variable $\gamma_{st}$, from which posterior probabilities of association 
-are conveniently obtained, $\text{pr}(\gamma_{st} = 1 \mid y)$, and employed to 
+latent variable $\gamma_{st}$, from which posterior probabilities of association, 
+$\text{pr}(\gamma_{st} = 1 \mid y)$, can be obtained and employed to 
 implement Bayesian false discovery rate control. The model is also 
 tailored to the detection of \emph{hotspots}, namely, predictors associated with 
 several responses: the top-level hierarchy entails a probit submodel which 
 involves a response-specific contribution to the spike-and-slab probability of 
 association, via $\zeta_t$, and a predictor-specific modulation of this 
 contribution, via $\theta_s$. The latter parameter also acts as the propensity 
-of predictor $X_s$ to be a hotspot and is assigned a horseshoe prior, which 
-adapts to the overall problem sparsity (via the global scale $\sigma_0$), while 
-flexibly capturing hotspot effects (via the Cauchy tail of the local scale $\lambda_s$). 
+of predictor $X_s$ to be a hotspot and is assigned a horseshoe prior; such a
+global-local prior specification permits adapting to the overall problem 
+sparsity (via the global scale $\sigma_0$), while flexibly capturing hotspot 
+effects (via the Cauchy tail of the local scale $\lambda_s$). 
 Joint inference requires special attention as the binary latent matrix 
 $\Gamma = \{\gamma_{st}\}$ creates a discrete search space of dimension 
 $2^{p\times q}$. To overcome this complication, `atlasqtl` implements a 
@@ -83,7 +88,7 @@ separation of the modes of a series of "heated" distributions (@ruffieux2020glob
 `atlasqtl` can be employed in any sparse multiple-response regression 
 setting. Hereafter we discuss a use case in the context of expression quantitative 
 trait locus (eQTL) analysis, in which \emph{hotspot genetic variants}, 
-controlling many molecular traits at once, may be responsible for important 
+controlling many gene expression traits at once, may be responsible for important 
 functional mechanisms underlying specific disease endpoints --- such studies aim 
 to clarify the genetic architecture of diseases by estimating associations 
 between up to a few million candidate predictors (genetic variants) and several 
@@ -103,7 +108,7 @@ levels).
 
 <!-- ![Graphical representation of model (\ref{eq_all}). The shaded nodes are observed, the others are inferred; $\beta_{st}$ is the regression coefficient for association between predictor $X_s$ (SNP) and response $y_t$ (expression level), and $\gamma_{st}$ is the latent binary indicator for the presence or absence of this effect. The probability of association is decoupled into response-specific, $\zeta_t$, and predictor-specific, $\theta_s$, contributions. The latter entails the global-local second-stage model for hotspots.](../figures/gm.pdf){#id .class width=50% height=50%} -->
 
-```{r figgm, echo=FALSE, fig.cap="Graphical representation of the model. The shaded nodes are observed, the others are inferred.", fig.align = 'center', out.width="90%"}
+```{r figgm, echo=FALSE, fig.cap="Graphical representation of the model. The shaded nodes are observed, the others are inferred.", fig.align = 'center', out.width="80%"}
 knitr::include_graphics("../figures/gm.png")
 ```
 
@@ -118,14 +123,12 @@ must be installed prior to installing the package.
 
 The material used in this example is available at 
 https://github.com/hruffieux/software_corner_ibs_bulletin
-for replication purposes. It involves synthetic genotyping data generated using 
-our in-house R package `echoseq`  
-(https://github.com/hruffieux/echoseq); these data emulate real genotypes (single 
-nucleotide polymorphisms, "SNPs") in the *LYZ* gene region, which cannot be 
-shared without data access agreement. The expression data consist of monocyte 
-levels before and after immune stimulation (resting, IFNg, LPS2h, LPS24h), as 
-well as B-cell levels. To each of these transcriptomic datasets corresponds a 
-separate eQTL problem. 
+for replication purposes (Rmarkdown document). It involves synthetic genotyping 
+data generated using our in-house R package `echoseq`; these data emulate real 
+genotypes (single nucleotide polymorphisms, "SNPs") in the *LYZ* gene region. 
+The gene expressionn traits consist of monocyte levels before and after immune 
+stimulation (resting, IFNg, LPS2h, LPS24h), as well as B-cell levels. To each of 
+these transcriptomic datasets corresponds a separate eQTL problem. 
 
 <!-- The two steps:  -->
 
@@ -200,30 +203,30 @@ case-by-case basis; it is however very limited when a permutation-based FDR
 threshold is employed, where the "null-case" permutation runs use the same 
 hyperparameter specifications. The remaining model parameters are inferred by 
 variational inference. In particular, the horseshoe prior on the hotspot 
-propensity circumvents ad-hoc choices of top-level variances (for which
+propensity circumvents ad-hoc choices of top-level variance parameters (for which
 inference is prone to spurious effects). This specification also has desirable 
-multiplicity adjustment properties for dealing with the large-response case, see 
+multiplicity adjustment properties in large-response settings, see 
 @ruffieux2020global.
 
 The code below runs the five `atlasqtl` analyses in parallel. The annealing 
 schedule (initial temperature, grid size and type of spacing) can be supplied 
-via the argument `anneal` --- here we use a default geometric schedule on the 
-inverse temperature, with initial temperature of $2$ and grid size $10$. The 
+via the argument `anneal`; here we use a default geometric schedule on the 
+inverse temperature, with initial temperature of $2$ and grid size of $10$. The 
 argument `add_collinear_back` is a boolean indicating whether or not to include 
 the final posterior summaries for all possible collinear variables in $X$ (which 
 are removed during the run to ensure the stability of inference). A number of 
 additional settings (e.g., tolerance, maximum number of iterations, 
-checkpointing, etc.) can be chosen by the user and are detailed on the help page 
-of the function, which can be displayed by running `?atlasqtl`. Note that the 
-parallel execution relies on the R package `parallel` which has already been 
-installed as part of the `atlasqtl` installation.
+checkpointing, etc.) can be chosen as detailed on the help page of the function, 
+which is accessed by running `?atlasqtl` in the console. 
 
 \footnotesize
-```{r atlasqtl-runs, include = TRUE, cache = TRUE, results = "hide"}
+```{r atlasqtl-load, include = TRUE, cache = FALSE, message=FALSE}
 require(atlasqtl)
+```
 
-mu_t <- 1
-v_t <- 4
+```{r atlasqtl-runs, include = TRUE, cache = TRUE, results = "hide"}
+
+mu_t <- 1; v_t <- 4 # hyperparameter specification
 
 vec_type <- names(list_data) # names of the eQTL problems 
                              # (resting, IFNg, LPS2h, 
@@ -245,49 +248,53 @@ list_out <- parallel::mclapply(vec_type, function(type) {
 names(list_out) <- vec_type
 ```
 \normalsize 
-The object returned by `atlasqtl` contains a range of useful posterior 
-quantities, which can be employed to assess:
+The object returned by `atlasqtl` contains posterior quantities, which can be 
+employed to assess:
 
-   * the pairwise associations between each pair of SNP and trait: using the 
+   * pairwise associations between each pair of SNP and trait: using the 
 variational posterior probabilities (PPIs) stored in `gam_vb`
 ($p \times q$ matrix) and the variational posterior means of the regression 
 estimates stored in `beta_vb` ($p \times q$ matrix);
-   * the hotspot propensities: using the variational posterior mean of $\theta_s$ 
+   * hotspot propensities: using the variational posterior mean of $\theta_s$ 
 stored in `theta_vb` (vector of length $p$).
 
-It also contains diagnostic values on the final status of convergence and number 
-of iterations used for the coordinate ascent variational algorithm.
-
-The custom `print.atlasqtl` and `summary.atlasqtl` function provide information
-about the run and a summary of the above posterior quantities; e.g., for the unstimulated-monocyte eQTL analysis:
+The custom `print.atlasqtl`, `summary.atlasqtl` and `plot.atlasqtl` S3 functions 
+provide further information about the run and a summary of the above posterior 
+quantities; e.g., for the LPS2h-monocyte eQTL analysis:
 
 
 \footnotesize
 ```{r output-snapshot, include = TRUE}
-print(list_out$bcells) 
-thres_fdr <- 0.05
-summary(list_out$bcells, thres = thres_fdr, fdr_adjust = TRUE)
+print(list_out$lps2h) 
 ```
 \normalsize 
 
+The summary can optionnaly be based on a supplied Bayesian FDR threshold 
+(here $5\%$); a $p \times q$ matrix of FDR estimates can also be directly 
+obtained using the `assign_bFDR` function.
 
+\footnotesize
+```{r output-snapshot2, include = TRUE}
+thres_fdr <- 0.05
+summary(list_out$lps2h, thres = thres_fdr, 
+        fdr_adjust = TRUE, full_summary = FALSE)
+```
+
+\normalsize 
 ```{r output-save, echo = FALSE}
 if (bool_save) { # if `bool_save = TRUE`, the full output is saved in the directory created above.
   save(list_out, rt, file = paste(res_dir, "output.RData", sep = "")) 
 }
 ```
 
-Finally, we display a Manhattan-type plot which indicates the position of the
-hotspots, as estimated in the five different eQTL analyses. 
-
-Also note that permutation analyses can be run to compute calibrated Bayesian FDR 
-thresholds on the PPIs; we don't implement this for computational economy and 
-use an arbitrary threshold instead. The procedure to derive these 
-permutation-based FDR threshold is described in details in @ruffieux2017efficient 
-and @ruffieux2020global.
+The Manhattan-type plot indicates the position of the hotspots, as estimated in 
+the five different eQTL analyses, using the Bayesian FDR threshold of $0.05$ on
+the PPIs; alternatively, thanks to the scalability of the variational 
+implementation, permutation-based Bayesian FDR can be obtained as an alternative 
+(@ruffieux2017efficient and @ruffieux2020global).
 
 \footnotesize
-```{r manhattan-plot, include = TRUE, fig.align = 'center'}
+```{r manhattan-plot, echo = FALSE, fig.align = 'center', fig.cap="Hotspot sizes, as obtained using the S3 function plot.atlasqtl.", fig.align = 'center', out.width="90%"}
 add <- FALSE
 ylim_max <- max(unlist(lapply(list_out, function(ll_type) rowSums(assign_bFDR(ll_type$gam_vb)<thres_fdr)))) 
 vec_pch <- c(15, 4, 2, 21, 20)
@@ -301,8 +308,19 @@ legend("topleft", legend = vec_type, pch = vec_pch, bty = "n")
 ```
 \normalsize 
 
+## Encoding predictor-level information
+
+We recently proposed a new approach, `epispot` (@ruffieux2021epispot) based on 
+the same hierarchical framework, 
+to encode and leverage information on the probability of candidate predictors to be 
+involved in associations. Specifically, the effects of a (possibly high-dimensional) 
+predictor-level vector of covariates are estimated using a secondary 
+spike-and-slab regression at the top of the model hierarchy. The R package is 
+available at https://github.com/hruffieux/epispot.
+
 ```{r session-info, echo = FALSE, results='hide'}
 sessionInfo() # for reproducibility
 ```
 
+\scriptsize
 ## References
