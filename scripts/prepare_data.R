@@ -68,7 +68,8 @@ stopifnot(all.equal(rownames(obj_data$snps), rownames(obj_data$phenos)))
 
 X <- obj_data$snps
 Y <- obj_data$phenos
+pat <- obj_data$pat
 
 if (bool_save) {
-  save(X, Y, file = file.path(data_dir, "prepared_data.RData"))
+  save(X, Y, pat, file = file.path(data_dir, "prepared_data.RData"))
 }

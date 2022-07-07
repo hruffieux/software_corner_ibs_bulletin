@@ -223,8 +223,13 @@ if (bool_save) { # if `bool_save = TRUE`, the full output is saved in the
 The Manhattan-type plot indicates the position of the hotspots after Bayesian 
 FDR control: 
 \footnotesize
-```{r manhattan-plot, include = TRUE, fig.align = 'center', fig.cap="Hotspot sizes, as obtained using the S3 function plot.atlasqtl.", fig.align = 'center', out.width="90%"}
-plot(obj_atlasqtl, thres = thres_fdr, fdr_adjust = TRUE)
+```{r manhattan-plot, include = TRUE, fig.align = 'center', fig.cap="Hotspot sizes, as obtained using the S3 function plot.atlasqtl. The crosses indicate the simulated sizes of the four hotspots.", fig.align = 'center', out.width="90%"}
+sim_hs <- rowSums(pat) # simulated hotspot sizes (4 hotspots)
+                       # pat is a p x q binary 'pattern matrix' 
+                       # locating the simulated associations
+plot(obj_atlasqtl, thres = thres_fdr, fdr_adjust = TRUE, 
+     ylim_max = max(sim_hs))
+points(which(sim_hs>0), sim_hs[sim_hs>0], pch = 4)
 ```
 \normalsize 
 Thanks to the scalability of the variational implementation, a 
