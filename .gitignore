@@ -2,6 +2,7 @@
 *scripts/*_cache
 *scripts/*_files
 *previous_issues
+*replicate_data.R
 
 .nfs*
 *~

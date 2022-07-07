@@ -8,7 +8,7 @@ output:
     number_sections: false
 classoption:
   - twocolumn
-geometry: margin=0.7in
+geometry: margin=0.6in
 bibliography: references.bib
 header-includes:
   - \usepackage[font={footnotesize, it}, labelfont={bf}]{caption}
@@ -87,7 +87,7 @@ diseases by estimating associations between several thousand responses
 (molecular traits, such as genomic, proteomic, metabolomic levels) and up to a 
 few million candidate predictors (genetic variants).
 
-```{r figgm, echo=FALSE, fig.cap="Graphical representation of the model with $n$ samples, $p$ candidate predictors and $q$ responses. The shaded nodes are observed, the others are inferred.", fig.align = 'center', out.width="80%"}
+```{r figgm, echo=FALSE, fig.cap="Graphical representation of the model with $n$ samples, $p$ candidate predictors and $q$ responses. The shaded nodes are observed, the others are inferred.", fig.align = 'center', out.width="70%"}
 knitr::include_graphics("../figures/gm.png")
 ```
 
@@ -104,38 +104,21 @@ available\footnote{\url{https://github.com/hruffieux/software_corner_ibs_bulleti
 for replication purposes. It involves synthetic genotyping data generated using 
 our in-house R package `echoseq`; these data emulate real genotypes (single 
 nucleotide polymorphisms, "SNPs") located in the *LYZ* gene region, on 
-chromosome 12. The gene expression traits consist of monocyte levels before and 
-after immune stimulation (resting, IFNg, LPS2h, LPS24h), as well as B-cell 
-levels. To each of these transcriptomic datasets corresponds a separate eQTL 
-problem. 
+chromosome 12. The gene expression traits consist of B-cell levels. 
 
-### Case study: an eQTL analysis to understand gene regulation in monocytes and B cells
+### Case study: an eQTL analysis to understand gene regulation in B cells
 
 ```{r data, echo=FALSE, results='hide'}
 
-# We set a seed for reproducibility. The random generator "L'Ecuyer-CMRG" 
-# ensures reproducibility when parallel processes are used.
-
-RNGkind("L'Ecuyer-CMRG")
-seed <- 1
-set.seed(seed)
 
 # The SNP and monocyte expression data are loaded (see `"Data and 
 # reproducibility" Section above for details).
 load(file.path(data_dir, "prepared_data.RData"))
 ls()
 
-p <- unique(sapply(list_data, function(ll_type) ncol(ll_type$snps)))
-stopifnot(length(p) == 1) # all datasets involve the same number of SNPs
-
-q <- unique(sapply(list_data, function(ll_type) ncol(ll_type$expr)))
-stopifnot(length(q) == 1) # all datasets involve the same number of traits
-
-n <- sapply(list_data, function(ll_type) nrow(ll_type$expr))
-n_check <- sapply(list_data, function(ll_type) nrow(ll_type$expr))
-stopifnot(all.equal(n, n_check)) # same number of samples for SNPs and traits 
-                                 # within each eQTL problem
-rm(n_check)
+p <- ncol(X)
+q <- ncol(Y)
+n <- nrow(X)
 
 p # number of SNPs
 q # number of traits in each eQTL problem
@@ -156,31 +139,17 @@ if( bool_save ){
 }
 ```
 
-We illustrate the main package functionalities on the five eQTL problems 
-(corresponding datasets stored in `list_data`). `atlasqtl` requires the 
-specification of just two hyperparameters via the elicitation of a prior mean 
-`mu_t` and variance `v_t` for the number of predictors associated with each 
-response. The sensitivity of inference to these choices should be evaluated on a 
-case-by-case basis; it is however low when a permutation-based Bayesian FDR 
-threshold is employed, where the "null-case" permutation runs use the same 
-hyperparameter specifications. The remaining model parameters are inferred by 
-variational inference. In particular, the horseshoe prior on the hotspot 
-propensity circumvents \emph{ad-hoc} choices of top-level variance parameters 
-(for which inference is prone to spurious effects). This specification also has 
-desirable multiplicity adjustment properties in large-response settings, see 
-@ruffieux2020global.
-
-The code below runs the five `atlasqtl` analyses in parallel. The annealing 
-schedule (initial temperature, grid size and type of spacing) can be supplied 
-via the argument `anneal`; here we use a default geometric schedule on the 
-inverse temperature, with initial temperature of $2$ and grid size of $10$. The 
-argument `add_collinear_back` is a boolean indicating whether or not to include 
-the final posterior summaries for all possible collinear variables in $X$ (which 
-are removed during the run to ensure the stability of inference). A number of 
-additional settings (e.g., tolerance for the variational algorithm, maximum 
-number of iterations, checkpointing, etc.) can be chosen as detailed on the help 
-page of the function, which can be accessed by running `?atlasqtl` in the 
-console. 
+`atlasqtl` requires the specification of just two hyperparameters via the 
+elicitation of a prior mean `mu_t` and variance `v_t` for the number of 
+predictors associated with each response. The sensitivity of inference to these 
+choices should be evaluated on a case-by-case basis; it is however low when a 
+permutation-based Bayesian FDR threshold is employed, where the "null-case" 
+permutation runs use the same hyperparameter specifications. The remaining model 
+parameters are inferred by variational inference. In particular, the horseshoe 
+prior on the hotspot propensity circumvents \emph{ad-hoc} choices of top-level 
+variance parameters (for which inference is prone to spurious effects). This 
+specification also has desirable multiplicity adjustment properties in 
+large-response settings, see @ruffieux2020global.
 
 \footnotesize
 ```{r atlasqtl-load, include = TRUE, cache = FALSE, message=FALSE}
@@ -191,28 +160,37 @@ require(atlasqtl)
 
 mu_t <- 1; v_t <- 4 # hyperparameter specification
 
-vec_type <- names(list_data) # names of the eQTL problems 
-                             # (resting, IFNg, LPS2h, 
-                             # LPS24h monocytes and B-cells).
-
-n_cpus <- 4 # nb of CPUs for parallel execution - please 
-            # alter according to your setup. 
-
-list_out <- parallel::mclapply(vec_type, function(type) {
-
-  snps <- list_data[[type]]$snps
-  expr <- list_data[[type]]$expr
-  
-  atlasqtl(Y = expr, X = snps, 
-           p0 = c(mu_t, v_t), 
-           add_collinear_back = TRUE)
-}, mc.cores = n_cpus)
-
-names(list_out) <- vec_type
+obj_atlasqtl <- atlasqtl(Y = Y, X = X, p0 = c(mu_t, v_t), 
+                         add_collinear_back = TRUE, 
+                         user_seed = 1)
 ```
 \normalsize 
-The object returned by `atlasqtl` contains posterior quantities that can be 
-employed to assess:
+
+The above code runs the analysis using a default geometric schedule on the 
+inverse temperature, with initial temperature of $2$ and grid size of $10$
+schedule --- these choices can be altered via the argument `anneal`. The 
+argument `add_collinear_back` is a boolean indicating whether or not to include 
+the final posterior summaries for all possible collinear variables in $X$ (which 
+are removed during the run to ensure the stability of inference). A number of 
+additional settings (e.g., seed for random number generator, tolerance for the 
+variational algorithm, maximum number of iterations, checkpointing, etc.) can be 
+chosen as detailed on the help page of the function, which can be accessed by 
+running `?atlasqtl` in the console. 
+
+The custom `print.atlasqtl`, `summary.atlasqtl` and `plot.atlasqtl` S3 functions 
+provide summary information and visualisation functionalities:
+
+\footnotesize
+```{r output-snapshot, include = TRUE}
+obj_atlasqtl
+```
+\normalsize 
+A serial execution of the above analysis on a standard 
+laptop\footnote{$2.8$GHz Quad-Core Intel Core i7 machine} takes less than
+$10$ seconds. 
+
+The object returned by `atlasqtl` contains posterior quantities 
+that can be employed to assess:
 
    * pairwise associations between each pair of predictor and response: using 
    the variational posterior probabilities of association (PPAs) stored in 
@@ -221,62 +199,43 @@ employed to assess:
    * hotspot propensities: using the variational posterior mean of $\theta_s$ 
 stored in `theta_vb` (vector of length $p$).
 
-The custom `print.atlasqtl`, `summary.atlasqtl` and `plot.atlasqtl` S3 functions 
-provide further information about the run and a summary of the above posterior 
-quantities; for instance, for the LPS2h-monocyte eQTL analysis:
-
-
-\footnotesize
-```{r output-snapshot, include = TRUE}
-list_out$lps2h
-```
-\normalsize 
-
-The summary can optionally be based on a supplied Bayesian FDR threshold 
-(here $5\%$); alternatively a $p \times q$ matrix of FDR estimates can be 
-directly obtained using the `assign_bFDR` function.
+A summary for these quantities can optionally be based on a supplied Bayesian 
+FDR threshold (here $5\%$):
 
 \footnotesize
 ```{r output-snapshot2, include = TRUE}
 thres_fdr <- 0.05
-summary(list_out$lps2h, thres = thres_fdr, 
+summary(obj_atlasqtl, thres = thres_fdr, 
         fdr_adjust = TRUE, full_summary = FALSE)
 ```
 
 \normalsize 
+Alternatively a $p \times q$ matrix of FDR estimates can be 
+directly obtained using the `assign_bFDR` function.
+
 ```{r output-save, echo = FALSE}
 if (bool_save) { # if `bool_save = TRUE`, the full output is saved in the 
                  # directory created above.
-  save(list_out, rt, file = paste(res_dir, "output.RData", sep = "")) 
+  save(obj_atlasqtl, file = paste(res_dir, "output.RData", sep = "")) 
 }
 ```
 
-The Manhattan-type plot indicates the position of the hotspots, as estimated in 
-the five different eQTL analyses, after Bayesian FDR control. Thanks to the 
-scalability of the variational implementation, a permutation-based 
-Bayesian FDR control can also be used (@ruffieux2017efficient and 
-@ruffieux2020global).
-
+The Manhattan-type plot indicates the position of the hotspots after Bayesian 
+FDR control: 
 \footnotesize
-```{r manhattan-plot, echo = FALSE, fig.align = 'center', fig.cap="Hotspot sizes, as obtained using the S3 function plot.atlasqtl.", fig.align = 'center', out.width="90%"}
-add <- FALSE
-ylim_max <- max(unlist(lapply(list_out, function(ll_type) rowSums(assign_bFDR(ll_type$gam_vb)<thres_fdr)))) 
-vec_pch <- c(15, 4, 2, 21, 20)
-
-for (type_id in 1:5) {
-  plot(list_out[[type_id]], thres = thres_fdr, fdr_adjust = TRUE, 
-       pch = vec_pch[type_id], ylim_max = ylim_max, add = add)
-  add <- TRUE  
-}
-legend("topleft", legend = vec_type, pch = vec_pch, bty = "n")
+```{r manhattan-plot, include = TRUE, fig.align = 'center', fig.cap="Hotspot sizes, as obtained using the S3 function plot.atlasqtl.", fig.align = 'center', out.width="90%"}
+plot(obj_atlasqtl, thres = thres_fdr, fdr_adjust = TRUE)
 ```
 \normalsize 
+Thanks to the scalability of the variational implementation, a 
+permutation-based Bayesian FDR control can also be used (@ruffieux2017efficient 
+and @ruffieux2020global).
 
 ### Encoding predictor-level information
 
-We recently proposed a new approach, called `epispot`, which 
-extends the `atlasqtl` hierarchical framework to encode and leverage information 
-on the probability of candidate predictors to be involved in associations 
+We recently proposed a new approach, called `epispot`, which extends the 
+`atlasqtl` hierarchical framework to encode and leverage information on the 
+probability of candidate predictors to be involved in associations 
 (@ruffieux2021epispot). Specifically, the effect of a (possibly 
 high-dimensional) predictor-level vector of covariates is estimated using a 
 secondary spike-and-slab regression at the top of the model hierarchy. The R 
