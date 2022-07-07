@@ -1,4 +1,4 @@
-## Software corner IBS bulletin: ATLASQTL – a global-local approach for detecting hotspots in multiple-response regression
+## Software corner IBS bulletin: atlasqtl – an R package for variable selection in sparse regression with hierarchically-related responses
 
 ### Data
 
