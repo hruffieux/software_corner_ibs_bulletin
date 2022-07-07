@@ -94,20 +94,20 @@ knitr::include_graphics("../figures/gm.png")
 ### Installation
 
 The `atlasqtl` package is written in R with C++ subroutines. It can be installed 
-following the instructions provided at 
-https://github.com/hruffieux/atlasqtl#installation. Note that the GSL library 
-must be installed prior to installing the package.
+following the instructions provided on 
+GitHub\footnote{\url{https://github.com/hruffieux/atlasqtl}}. 
 
 ### Data and reproducibility
 
-The material (incl. Rmarkdown document) used in the example below is available 
-at https://github.com/hruffieux/software_corner_ibs_bulletin for replication 
-purposes. It involves synthetic genotyping data generated using our in-house R 
-package `echoseq`; these data emulate real genotypes (single nucleotide 
-polymorphisms, "SNPs") located on chromosome 12 in the *LYZ* gene region. The 
-gene expression traits consist of monocyte levels before and after immune 
-stimulation (resting, IFNg, LPS2h, LPS24h), as well as B-cell levels. To each of 
-these transcriptomic datasets corresponds a separate eQTL problem. 
+The material (incl. Rmarkdown document) used in the example below is publicly 
+available\footnote{\url{https://github.com/hruffieux/software_corner_ibs_bulletin}} 
+for replication purposes. It involves synthetic genotyping data generated using 
+our in-house R package `echoseq`; these data emulate real genotypes (single 
+nucleotide polymorphisms, "SNPs") located in the *LYZ* gene region, on 
+chromosome 12. The gene expression traits consist of monocyte levels before and 
+after immune stimulation (resting, IFNg, LPS2h, LPS24h), as well as B-cell 
+levels. To each of these transcriptomic datasets corresponds a separate eQTL 
+problem. 
 
 ### Case study: an eQTL analysis to understand gene regulation in monocytes and B cells
 
@@ -157,7 +157,7 @@ if( bool_save ){
 ```
 
 We illustrate the main package functionalities on the five eQTL problems 
-(corresponding datasets stored in the list `list_data`). `atlasqtl` requires the 
+(corresponding datasets stored in `list_data`). `atlasqtl` requires the 
 specification of just two hyperparameters via the elicitation of a prior mean 
 `mu_t` and variance `v_t` for the number of predictors associated with each 
 response. The sensitivity of inference to these choices should be evaluated on a 
@@ -196,7 +196,7 @@ vec_type <- names(list_data) # names of the eQTL problems
                              # LPS24h monocytes and B-cells).
 
 n_cpus <- 4 # nb of CPUs for parallel execution - please 
-            # change this number according to your setup. 
+            # alter according to your setup. 
 
 list_out <- parallel::mclapply(vec_type, function(type) {
 
@@ -280,7 +280,8 @@ on the probability of candidate predictors to be involved in associations
 (@ruffieux2021epispot). Specifically, the effect of a (possibly 
 high-dimensional) predictor-level vector of covariates is estimated using a 
 secondary spike-and-slab regression at the top of the model hierarchy. The R 
-package is available at https://github.com/hruffieux/epispot.
+package is available on 
+GitHub\footnote{\url{https://github.com/hruffieux/epispot}}.
 
 ```{r session-info, echo = FALSE, results='hide'}
 sessionInfo() # for reproducibility
