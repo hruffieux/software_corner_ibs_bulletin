@@ -1,36 +1,16 @@
-## Software corner IBS bulletin: atlasqtl – an R package for variable selection in sparse regression with hierarchically-related responses
+## Software corner IBS bulletin on atlasqtl
 
 ### Data
 
-The genotyping data are protected. We are therefore using a synthetic dataset emulating the real data. 
-The expression and replicated genotyping data are in 
+The genotyping data are protected. We are therefore using a synthetic dataset 
+emulating the real data. The expression and replicated genotyping data are in 
 [data/replicated_data.RData](https://github.com/hruffieux/software_corner_ibs_bulletin/blob/multiple-analyses/data/replicated_data.RData). The ready-to-use data with simulated genetic associations are in 
 [data/prepared_data.RData](https://github.com/hruffieux/software_corner_ibs_bulletin/blob/multiple-analyses/data/prepared_data.RData).
 
-**Important note:** these are large files which are stored using Git Large File Storage. To clone these
-files along with the repository, please install Git LFS, e.g., using Homebrew:
-
-``` bash
-brew install git-lfs
-```
-
-and, within the cloned repository, initialise it for your account by using:
-
-``` bash
-git lfs install
-```
-
-and retrieve all large files:
-
-``` bash
-git lfs pull
-```
-
-(Alternatively, since there are only two such files, they can be downloaded manually from the Github interface.)
-
 The file [data/prepared_data.RData](https://github.com/hruffieux/software_corner_ibs_bulletin/blob/multiple-analyses/data/prepared_data.RData) 
-is obtained by updating the real expression data to simulate genetic associations between the synthetic 
-genotyping data and the transcript levels. This last step is obtained by running the R file 
+is obtained by updating the real expression data to simulate genetic associations 
+between the synthetic genotyping data and the transcript levels. This last step 
+is obtained by running the R file 
 [scripts/prepare_data.R](https://github.com/hruffieux/software_corner_ibs_bulletin/blob/multiple-analyses/scripts/prepare_data.R) 
 after installing the R package **echoseq**:
 
@@ -52,7 +32,8 @@ remotes::install_github("hruffieux/atlasqtl")
 
 The eQTL analysis can be run using the Rmarkdown script: 
 [scripts/atlasqtl_software_corner.Rmd](https://github.com/hruffieux/software_corner_ibs_bulletin/blob/multiple-analyses/scripts/atlasqtl_software_corner.Rmd). 
-This file also provides step-by-step guidance for the use and settings of the **atlasqtl** for our example.
+This file also acts as a simple tutorial for the use of **atlasqtl**.
+
 
 ### Issues
 
