@@ -32,13 +32,13 @@ setwd(main_dir)
 ```
 
 Statistical studies aimed at identifying associations between a high-dimensional 
-vector of candidate predictors and a series of correlated outcomes multiply, 
-prompted by the proliferation of technologies capable of measuring large volumes 
-of information, whether on health and lifestyle parameters, molecular entities 
-or even galaxies. As well as growing in dimension, the collected datasets are 
-also growing in complexity, which calls for elaborate and flexible modelling 
-approaches. When coupled with robust and efficient inference, Bayesian 
-hierarchical modelling is a powerful framework for describing intricate 
+vector of candidate predictors and a collection of correlated outcomes have 
+multiplied, prompted by the proliferation of technologies capable of measuring 
+large volumes of information, whether on health and lifestyle parameters, 
+molecular entities or even galaxies. As well as growing in dimension, the 
+collected datasets are also growing in complexity, which calls for elaborate and 
+flexible modelling approaches. When coupled with robust and efficient inference, 
+Bayesian hierarchical modelling is a powerful framework for describing intricate 
 dependencies at the scale required by current applications, while conveying 
 uncertainty in a coherent fashion. In this note, we present the R package 
 `atlasqtl`, which implements a scalable hierarchical framework for variable 
