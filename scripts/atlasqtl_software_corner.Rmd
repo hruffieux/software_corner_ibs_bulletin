@@ -90,7 +90,7 @@ shown that accounting jointly for all traits and genetic variants with
 `atlasqtl` substantially improves the detection of weak association effects over 
 more conventional marginal screening approaches (@ruffieux2020global).
 
-```{r figgm, echo=FALSE, fig.cap="Graphical representation of the model with $n$ samples, $p$ candidate predictors and $q$ responses. The shaded nodes are observed, the others are inferred.", fig.align = 'center', out.width="90%"}
+```{r figgm, echo=FALSE, fig.cap="Graphical representation of the model with $n$ samples, $p$ candidate predictors and $q$ responses. The shaded nodes are observed, the others are inferred.", fig.align = 'center', out.width="100%"}
 knitr::include_graphics("../figures/gm.png")
 ```
 
@@ -98,8 +98,8 @@ knitr::include_graphics("../figures/gm.png")
 ### Installation
 
 The `atlasqtl` package is written in R with C++ subroutines. It can be installed 
-from GitHub\footnote{\url{https://github.com/hruffieux/atlasqtl}} following the
-instructions provided.
+from GitHub\footnote{\url{https://github.com/hruffieux/atlasqtl}}, following the
+provided instructions.
 
 
 ### Data and reproducibility
@@ -138,8 +138,8 @@ The Rmarkdown document and data used to generate this note are publicly
 available for 
 replication\footnote{\url{https://github.com/hruffieux/software_corner_ibs_bulletin}}. 
 We restrict our illustration to the analysis of a small semi-synthetic dataset: 
-it involves $q = 875$ traits capturing B-cell gene expression for $n = 100$ 
-individuals ($n \times q$ matrix `Y`), and $p = 200$ candidate predictors 
+it involves $q =$ `r q` traits capturing B-cell gene expression for $n =$ `r n`
+individuals ($n \times q$ matrix `Y`), and $p =$ `r p` candidate predictors 
 generated with our in-house package `echoseq`\footnote{\url{https://github.com/hruffieux/echoseq}} 
 to emulate real genetic variants ($n\times p$ matrix `X`). A subset of the 
 traits was modified so as to be associated with five hotspot predictors; these 
@@ -163,13 +163,13 @@ require(atlasqtl)
 mu_t <- 1; v_t <- 4 # hyperparameter specification
 
 obj_atlasqtl <- atlasqtl(Y = Y, X = X, p0 = c(mu_t, v_t), 
-                         add_collinear_back = TRUE, 
                          user_seed = 1)
 ```
 \normalsize 
 
-The analysis took less than $10$ seconds on a standard 
-laptop\footnote{$2.8$ GHz Quad-Core Intel Core i7 machine (serial execution)}.
+The analysis typically takes less than $10$ seconds on a standard 
+laptop\footnote{Here a $2.8$ GHz Quad-Core Intel Core i7 machine (serial 
+execution)}.
 
 `atlasqtl` requires the specification of just two hyperparameters via the 
 elicitation of a prior mean `mu_t` and variance `v_t` for the number of 
@@ -182,15 +182,14 @@ inference. In particular, the horseshoe prior on the hotspot propensity
 circumvents \emph{ad-hoc} choices of top-level variance parameters (for which 
 inference is prone to spurious effects). This specification also has desirable 
 multiplicity adjustment properties in large-response settings, see 
-@ruffieux2020global. The argument `add_collinear_back` is a boolean indicating 
-whether or not to include the final posterior summary for all possible collinear 
-variables in `X` (which are removed during the run to ensure the stability of 
-inference). The user can control additional settings --- e.g., the annealing 
-schedule, seed for random number generation, convergence tolerance threshold, 
-checkpointing --- as detailed on the help page of the function, which can be 
-accessed by running `?atlasqtl` in the console. 
+@ruffieux2020global. 
 
-Custom S3 functions are also available. For instance the `print.atlasqtl` 
+The user can control additional settings --- e.g., the annealing schedule, seed 
+for random number generation, convergence tolerance threshold, checkpointing --- 
+as detailed on the help page of the function, which can be accessed by running 
+`?atlasqtl` in the console. 
+
+Custom S3 functions are also available. For instance, the `print.atlasqtl` 
 function provides basic information about the run:
 \footnotesize
 ```{r S3-print, include = TRUE}
@@ -201,14 +200,14 @@ obj_atlasqtl
 The object `obj_atlasqtl` returned by `atlasqtl` contains posterior quantities 
 that can be employed to assess:
 
-   * pairwise associations between each pair of predictor and response: using 
-   the variational posterior probabilities of association (PPAs) stored in 
-   `gam_vb` ($p \times q$ matrix) and the variational posterior means of the 
-   regression estimates stored in `beta_vb` ($p \times q$ matrix);
+   * associations between each pair of predictor and response: using the 
+   variational posterior probabilities of association stored in `gam_vb` 
+   ($p \times q$ matrix) and the variational posterior means of the regression 
+   estimates stored in `beta_vb` ($p \times q$ matrix);
    * hotspot propensities: using the variational posterior mean of $\theta_s$ 
 stored in `theta_vb` (vector of length $p$).
 
-The `summary.atlasqtl` function displays a variable selection summary, which can 
+The function `summary.atlasqtl` displays a variable selection summary, which can 
 be based on a supplied Bayesian FDR threshold (here $5\%$):
 
 \footnotesize
@@ -225,9 +224,10 @@ Alternatively, the scalablility of `atlasqtl` permits efficient
 permutation-based FDR estimation (see @ruffieux2017efficient or 
 @ruffieux2020global).
 
-Finally, the `plot.atlasqtl` function displays a Manhattan-type plot 
+Finally, the function `plot.atlasqtl` displays a Manhattan-type plot 
 (Figure \@ref(fig:S3-plot)) with the hotspot positions and sizes after Bayesian 
 FDR control: 
+
 \footnotesize
 ```{r S3-plot, include = TRUE, fig.align = 'center', fig.cap="Hotspot sizes, as obtained using the S3 function plot.atlasqtl. The crosses indicate the simulated sizes of the five hotspots.", fig.align = 'center', out.width="90%"}
 sim_hs <- rowSums(pat) # simulated hotspot sizes (5 hotspots)
@@ -255,7 +255,7 @@ We recently proposed a new approach, called `epispot`, which extends the
 candidate predictors to be involved in associations (@ruffieux2021epispot). 
 Specifically, the effect of a (possibly high-dimensional) predictor-level vector 
 of covariates is estimated using a secondary spike-and-slab regression at the 
-top of the model hierarchy. The R package is available on 
+top of the model hierarchy. The R package for this approach is also available on 
 GitHub\footnote{\url{https://github.com/hruffieux/epispot}}.
 
 ```{r session-info, echo = FALSE, results='hide'}
