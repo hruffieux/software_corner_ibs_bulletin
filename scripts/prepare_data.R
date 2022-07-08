@@ -30,7 +30,7 @@ bool_save <- TRUE
 #
 load(file.path(data_dir, "replicated_data.RData"))
 
-p <- ncol(X) # SNPs
+p <- ncol(X) # genetic variants (single nucleotide polymorphisms, SNPs)
 q <- ncol(Y_original) # B cell expression data
 
 stopifnot(nrow(X) == nrow(Y_original)) # same number of samples for SNPs and expression levels
